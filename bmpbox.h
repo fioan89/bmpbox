@@ -15,7 +15,6 @@ private:
 
     bmpheader_t header;
     bmpinfo_t info;
-    rgba_t** pixels;
     rgba_t* palette;
 
     FILE* in;
@@ -118,10 +117,8 @@ public:
      * @brief fillBufferFromRow Fills a buffer with data.
      * @param buffer 8 bit buffer where data will be stored.
      * @param length buffer length. Must be equal with image width.
-     * @param row Tells from which row of the general
-     * file buffer should be filled.
      */
-    void fillBufferFromRow(uint8_t* buffer, size_t length, uint32_t row);
+    void fillBufferFromRow(uint8_t* buffer, size_t length);
 
     /**
      * @brief writeToFile Saves the general file to BMP image file.

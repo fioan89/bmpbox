@@ -40,7 +40,6 @@ BMPBox::BMPBox(std::string fileName)
     info.vres = DEFAULT_DPI_Y;
     info.compress_type = 0;
 
-    pixels = allocatePixels();
     palette = allocateColorTable();
     genColorTable(palette);
 
@@ -134,44 +133,6 @@ void BMPBox::genColorTable(rgba_t *colors)
     }
 }
 
-rgba_t** BMPBox::allocatePixels()
-{
-    unsigned int i, j;
-
-    rgba_t** pixels = (rgba_t**) malloc(sizeof(rgba_t) *width);
-    for (i = 0; i < width; ++i) {
-        pixels[i] =(rgba_t*) malloc(sizeof(rgba_t) * height);
-        for (j = 0; j < height; ++j) {
-            pixels[i][j].red = 255;
-            pixels[i][j].green = 255;
-            pixels[i][j].blue = 255;
-            pixels[i][j].alpha = 0;
-        }
-    }
-    return pixels;
-}
-
-bool BMPBox::setPixel(uint32_t x, uint32_t y, rgba_t pixel)
-{
-
-    if ((x >= info.width) || (y >= info.height))
-    {
-        if (x >= info.width)
-        {
-            fprintf(stderr, "[ debug ] Error: x with value %d is equal or greater than width %d!\n",
-                    x, info.width);
-        }
-        if (y >= info.height)
-        {
-            fprintf(stderr, "[ debug ] Error: y with value %d is equal or greater than height %d!\n",
-                    y, info.height);
-        }
-        return false;
-    }
-    pixels[x][y] = pixel;
-    return true;
-}
-
 bool BMPBox::isBigEndian()
 {
     uint16_t value = 0x0001;
@@ -247,19 +208,16 @@ void BMPBox::writePalette(rgba_t *palette)
     }
 }
 
-void BMPBox::fillBufferFromRow(uint8_t *buffer, size_t length, uint32_t row)
+void BMPBox::fillBufferFromRow(uint8_t *buffer, size_t length)
 {
-    unsigned int i;
     if (width > length)
     {
         fprintf(stderr, "[ debug ] Error: Buffer length with value %d is less than width %d!\n", length, width);
         return;
     }
 
-    for (i = 0; i < width; ++i)
-    {
-        buffer[i] = pixels[i][row].red;
-    }
+    // read data from file;
+    fread(buffer, sizeof(uint8_t), length, in);
 
 }
 
@@ -274,25 +232,6 @@ bool BMPBox::writeToFile(std::string fileName)
     {
         fprintf(stderr, "[ debug ] Error: Could not write to file %s!\n", fileName.c_str());
         return false;
-    }
-
-    // fill the pixel buffer
-    unsigned int i,j;
-    int bytesRead;
-    for (i = 0; i < width; i++)
-    {
-        for (j = 0; j < height; j++)
-        {
-            uint8_t value;
-            bytesRead = fread(&value, sizeof(uint8_t), 1, in);
-            if (bytesRead != 1)
-            {
-                value = 0;
-            }
-            rgba_t pixel;
-            pixel.red = value;
-            setPixel(i,j, pixel);
-        }
     }
 
     /* Write the file */
@@ -313,7 +252,7 @@ bool BMPBox::writeToFile(std::string fileName)
     for (row = height - 1; row >= 0; --row)
     {
         memset(buf, 0, bytes_per_line);
-        fillBufferFromRow(buf, bytes_per_line, row);
+        fillBufferFromRow(buf, bytes_per_line);
         fwrite(buf, sizeof(uint8_t), bytes_per_line, out);
     }
 
@@ -325,16 +264,6 @@ bool BMPBox::writeToFile(std::string fileName)
 BMPBox::~BMPBox()
 {
     fclose(in);
-    // free pixel data
-    unsigned int i;
-    if (pixels)
-    {
-        for (i = 0; i < width; ++i)
-        {
-            free(pixels[i]);
-        }
-        free(pixels);
-    }
     // free palette
     if (palette)
     {

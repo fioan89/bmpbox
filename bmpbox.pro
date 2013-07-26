@@ -29,3 +29,7 @@ unix:!symbian {
     INSTALLS += target \
                 header_files
 }
+
+OTHER_FILES += \
+    LICENSE.txt \
+    TODO.txt
