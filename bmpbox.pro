@@ -12,7 +12,8 @@ CONFIG += staticlib
 
 header_files.files += bmpbox.h \
                       bmp.h \
-                      bmpunbox.h
+                      bmpunbox.h\
+                      bmptypes.h
 
 
 SOURCES += bmpbox.cpp \
@@ -20,7 +21,8 @@ SOURCES += bmpbox.cpp \
 
 HEADERS += bmpbox.h \
     bmp.h \
-    bmpunbox.h
+    bmpunbox.h \
+    bmptypes.h
 
 unix:!symbian {
     maemo5 {
