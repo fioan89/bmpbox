@@ -11,7 +11,8 @@ TEMPLATE = lib
 CONFIG += staticlib
 
 header_files.files += bmpbox.h \
-                      bmp.h
+                      bmp.h \
+                      bmpunbox.h
 
 
 SOURCES += bmpbox.cpp \
@@ -20,6 +21,7 @@ SOURCES += bmpbox.cpp \
 HEADERS += bmpbox.h \
     bmp.h \
     bmpunbox.h
+
 unix:!symbian {
     maemo5 {
         target.path = /opt/usr/lib
