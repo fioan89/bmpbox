@@ -1,0 +1,5 @@
+[] optimize writeToFile so that pixel buffer length will not contain the whole file.
+[] try to fill pixel buffer with more than one value (2, 3, 4)
+[] create an unbox class
+[] flickr limits the picture size. Experiment with multiple size and try to save a
+general file into multiple bmp pictures.
