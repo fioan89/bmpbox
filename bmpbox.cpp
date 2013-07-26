@@ -1,6 +1,6 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cmath>
 #include <cstring>
 
 #include "bmpbox.h"
@@ -10,9 +10,11 @@ BMPBox::BMPBox(std::string fileName)
     bit_depth = BITDEPTH;
     nr_of_colors = pow(2, bit_depth);
     aditionalBytes = 0;
+
     in = fopen(fileName.c_str(), "r");
     if (in == NULL)
     {
+        fprintf(stderr, "[ debug ] Error: file %s could not be opened!\n", fileName.c_str());
         return;
     }
     size_t sz = getFileSzInBytes(in);
