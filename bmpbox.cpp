@@ -2,66 +2,107 @@
 #include <cstdlib>
 #include <cmath>
 #include <cstring>
+#include <QFileInfo>
 
 #include "bmpbox.h"
 
 BMPBox::BMPBox(std::string fileName)
 {
-    bit_depth = BITDEPTH;
-    nr_of_colors = pow(2, bit_depth);
-    aditionalBytes = 0;
+    fprintf(stderr, "#######################################################################\n");
+    fileHeaderUsed = false;
+    bufferIndex = 0;
+    fileHeader = (geninfo_t*) malloc(sizeof(geninfo_t));
+    memset(fileHeader, 0, sizeof(geninfo_t));
+    header = (bmpheader_t*) malloc(sizeof(bmpheader_t));
+    memset(header, 0, sizeof(bmpheader_t));
+    info = (bmpinfo_t*) malloc(sizeof(bmpinfo_t));
+    memset(info, 0, sizeof(bmpinfo_t));
 
-    in = fopen(fileName.c_str(), "r");
+    bitDepth = BITDEPTH;
+    nrOfColorsInPalette = pow(2, bitDepth);
+    additionalBytes = 0;
+
+    in = NULL;
+    in = fopen(fileName.c_str(), "rw+");
     if (in == NULL)
     {
         fprintf(stderr, "[ debug ] Error: file %s could not be opened!\n", fileName.c_str());
         return;
     }
     size_t sz = getFileSzInBytes(in);
+
+    fileHeader->magic[0] = 'G';
+    fileHeader->magic[1] = 'F';
+    fileHeader->magic[2] = 'E';
+    fileHeader->major_version = MAJOR_VERSION;
+    fileHeader->minor_version = MINOR_VERSION;
+
+    memset(fileHeader->full_name, '\n', 1024);
+    memset(fileHeader->file_name, '\n', 256);
+    memset(fileHeader->parent_directory, '\n', 1024);
+    memset(fileHeader->extension, '\n', 255);
+
+    QFileInfo fi(fileName.c_str());
+    const char* fullName = fi.filePath().toStdString().c_str();
+    const char* fileNm = fi.completeBaseName().toStdString().c_str();
+    const char* parentDirectory = fi.absolutePath().toStdString().c_str();
+    const char* extension = fi.completeSuffix().toStdString().c_str();
+
+    strncpy(fileHeader->full_name, fullName, 1024);
+    strncpy(fileHeader->file_name, fileNm, 256);
+    strncpy(fileHeader->parent_directory, parentDirectory, 1024);
+    strncpy(fileHeader->extension, extension, 255);
+
+    fileHeader->data_size = sz;
+    fileHeader->is_chunk = 0;
+    fileHeader->is_public = 0;
+
+    bufferToHoldFileHeader = reinterpret_cast<uint8_t*> (fileHeader);
+
     uint32_t* primes;
-    primes = findTwoDivisors(sz);
+    primes = findTwoDivisors(sz + sizeof(geninfo_t));
     height = primes[0];
     width = primes[1];
     free(primes);
 
     fprintf(stderr, "[ debug ] Info: size:%d height:%d width:%d\n",sz, height, width);
-    fprintf(stderr, "[ debug ] Info: aditional bytes to add:%d\n", aditionalBytes);
+    fprintf(stderr, "[ debug ] Info: aditional bytes to add:%d\n", additionalBytes);
 
     // create bmp picture
-    header.magic[0] = 'B';
-    header.magic[1] = 'M';
-    header.creator1 = 0;
-    header.creator2 = 0;
+    header->magic[0] = 'B';
+    header->magic[1] = 'M';
+    header->creator1 = 0;
+    header->creator2 = 0;
 
-    info.header_sz = 40;
-    info.width = width;
-    info.height = height;
-    info.nplanes = 1;
-    info.depth = bit_depth;
-    info.hres = DEFAULT_DPI_X;
-    info.vres = DEFAULT_DPI_Y;
-    info.compress_type = 0;
+    info->header_sz = 40;
+    info->width = width;
+    info->height = height;
+    info->nplanes = 1;
+    info->depth = bitDepth;
+    info->hres = DEFAULT_DPI_X;
+    info->vres = DEFAULT_DPI_Y;
+    info->compress_type = 0;
 
+    palette = NULL;
     palette = allocateColorTable();
     genColorTable(palette);
 
     /* Calculate the field value of header and DIB */
-    double bytes_per_pixel = (bit_depth * 1.0) / 8.0;
+    double bytes_per_pixel = (bitDepth * 1.0) / 8.0;
     uint32_t bytes_per_line = (int)ceil(bytes_per_pixel * width);
     if (bytes_per_line % 4 != 0)
     {
         bytes_per_line += 4 - bytes_per_line % 4;
     }
-    info.bmp_bytesz = bytes_per_line * height;
-    uint32_t palette_size = 0;
-    palette_size = pow(2, bit_depth) * 4;
-    header.offset = 14 + info.header_sz + palette_size;
-    header.filesz = header.offset + info.bmp_bytesz;
+    info->bmp_bytesz = bytes_per_line * height;
+
+    header->offset = 14 + info->header_sz + nrOfColorsInPalette * 4;
+    header->filesz = header->offset + info->bmp_bytesz;
 }
 
 uint32_t BMPBox::getAditionalBytes()
 {
-    return aditionalBytes;
+    return additionalBytes;
 }
 
 uint32_t* BMPBox::findTwoDivisors(uint32_t number)
@@ -76,7 +117,7 @@ uint32_t* BMPBox::findTwoDivisors(uint32_t number)
     {
         primes[0] +=1;
     }
-    aditionalBytes = (primes[0] * primes[1]) - number;
+    additionalBytes = (primes[0] * primes[1]) - number;
 
     return primes;
 }
@@ -97,17 +138,17 @@ size_t BMPBox::getFileSzInBytes(FILE *fp)
 
 uint8_t BMPBox::getBitDepth()
 {
-    return bit_depth;
+    return bitDepth;
 }
 
 uint32_t BMPBox::getNumberOfColors()
 {
-    return nr_of_colors;
+    return nrOfColorsInPalette;
 }
 
 rgba_t* BMPBox::allocateColorTable()
 {
-    info.ncolors = getNumberOfColors();
+    info->ncolors = getNumberOfColors();
     rgba_t * buffer = (rgba_t*) malloc(sizeof(rgba_t)* getNumberOfColors());
     return buffer;
 }
@@ -124,7 +165,7 @@ void BMPBox::genColorTable(rgba_t *colors)
     }
 
     if (getBitDepth() != 1)
-        step_size = 255 / (nr_of_colors - 1);
+        step_size = 255 / (nrOfColorsInPalette - 1);
     else
         step_size = 255;
 
@@ -170,13 +211,16 @@ void BMPBox::writeHeader(bmpheader_t *header)
     {
         fprintf(stderr, "[ debug ] Info: your architecture is big endian. Going to switch header to little endian!\n");
         swapHeaderEndianess(header);
-    }
 
-    fwrite(header->magic, sizeof(uint8_t), 2, out);
+    }
+    fflush(out);
+    fwrite(&(header->magic[0]), sizeof(uint8_t), 1, out);
+    fwrite(&(header->magic[1]), sizeof(uint8_t), 1, out);
     fwrite(&(header->filesz), sizeof(uint32_t), 1, out);
     fwrite(&(header->creator1), sizeof(uint16_t), 1, out);
     fwrite(&(header->creator2), sizeof(uint16_t), 1, out);
     fwrite(&(header->offset), sizeof(uint32_t), 1, out);
+    fflush(out);
 }
 
 void BMPBox::writeInfo(bmpinfo_t *info)
@@ -186,7 +230,7 @@ void BMPBox::writeInfo(bmpinfo_t *info)
         fprintf(stderr, "[ debug ] Info: your architecture is big endian. Going to switch info to little endian!\n");
         swapInfoEndianess(info);
     }
-
+    fflush(out);
     fwrite(&(info->header_sz), sizeof(uint32_t), 1, out);
     fwrite(&(info->width), sizeof(uint32_t), 1, out);
     fwrite(&(info->height), sizeof(uint32_t), 1, out);
@@ -198,15 +242,17 @@ void BMPBox::writeInfo(bmpinfo_t *info)
     fwrite(&(info->vres), sizeof(uint32_t), 1, out);
     fwrite(&(info->ncolors), sizeof(uint32_t), 1, out);
     fwrite(&(info->nimpcolors), sizeof(uint32_t), 1, out);
+    fflush(out);
 }
 
 void BMPBox::writePalette(rgba_t *palette)
 {
 
     unsigned int i;
-    for (i = 0; i < nr_of_colors; ++i)
+    for (i = 0; i < nrOfColorsInPalette; ++i)
     {
         fwrite(&palette[i], sizeof(rgba_t), 1, out);
+        fflush(out);
     }
 }
 
@@ -218,9 +264,36 @@ void BMPBox::fillBufferFromRow(uint8_t *buffer, size_t length)
         return;
     }
 
-    // read data from file;
-    fread(buffer, sizeof(uint8_t), length, in);
+    if (!fileHeaderUsed)
+    {
+        if ((sizeof(geninfo_t) - bufferIndex) <= length)
+        {
 
+            unsigned int i = 0;
+            int counter = -1;
+            for (i = bufferIndex; i < sizeof(geninfo_t); i++)
+            {
+                counter++;
+                buffer[counter] = bufferToHoldFileHeader[i];
+            }
+
+            for (i = ++counter; i <length; i++)
+            {
+                fread(&buffer[i], sizeof(uint8_t), 1, in);
+            }
+            fileHeaderUsed = true;
+        }
+        else
+        {
+            memcpy(buffer, bufferToHoldFileHeader + bufferIndex, length);
+            bufferIndex += length;
+        }
+    }
+    else
+    {
+        //read data from file;
+        fread(buffer, sizeof(uint8_t), length, in);
+    }
 }
 
 bool BMPBox::writeToFile(std::string fileName)
@@ -229,25 +302,27 @@ bool BMPBox::writeToFile(std::string fileName)
     int row;
     unsigned char *buf;
 
-    /* Create the file */
-    if ((out = fopen(fileName.c_str(), "wb")) == NULL)
+    out = NULL;
+    out = fopen(fileName.c_str(), "w");
+    if (out == NULL)
     {
         fprintf(stderr, "[ debug ] Error: Could not write to file %s!\n", fileName.c_str());
         return false;
     }
 
     /* Write the file */
-    writeHeader(&header);
-    writeInfo(&info);
+    writeHeader(header);
+    writeInfo(info);
     writePalette(palette);
-
     double bytes_per_pixel;
     int bytes_per_line;
 
-    bytes_per_pixel = (bit_depth * 1.0) / 8.0;
+    bytes_per_pixel = (bitDepth * 1.0) / 8.0;
     bytes_per_line = (int)ceil(bytes_per_pixel * width);
     if (bytes_per_line % 4 != 0)
+    {
         bytes_per_line += 4 - bytes_per_line % 4;
+    }
 
     buf = (unsigned char *)malloc(bytes_per_line);
 
@@ -256,19 +331,34 @@ bool BMPBox::writeToFile(std::string fileName)
         memset(buf, 0, bytes_per_line);
         fillBufferFromRow(buf, bytes_per_line);
         fwrite(buf, sizeof(uint8_t), bytes_per_line, out);
+        fflush(out);
     }
-
     free(buf);
-    fclose(out);
+
     return true;
 }
 
 BMPBox::~BMPBox()
 {
-    fclose(in);
-    // free palette
-    if (palette)
-    {
-        free(palette);
+    fclose(in); in = NULL;
+    fclose(out); out = NULL;
+
+    if (fileHeader != NULL) {
+        free(fileHeader);
+        fileHeader = NULL;
     }
+    if (header != NULL) {
+        free(header);
+        header = NULL;
+    }
+
+    if (info != NULL) {
+        free(info);
+        info = NULL;
+    }
+    if (palette != NULL) {
+        free(palette);
+        palette = NULL;
+    }
+    fprintf(stderr, "#######################################################################\n");
 }

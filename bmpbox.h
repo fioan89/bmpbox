@@ -3,20 +3,25 @@
 
 #include <string>
 #include "bmp.h"
+#include "fileinfo.h"
 
 class BMPBox
 {
 private:
-    uint8_t bit_depth;
-    uint32_t nr_of_colors;
+    uint8_t bitDepth;
+    uint32_t nrOfColorsInPalette;
     uint32_t width;
     uint32_t height;
-    uint32_t aditionalBytes;
+    uint32_t additionalBytes;
+    bool fileHeaderUsed;
+    int bufferIndex;
 
-    bmpheader_t header;
-    bmpinfo_t info;
+    bmpheader_t* header;
+    bmpinfo_t* info;
     rgba_t* palette;
+    geninfo_t* fileHeader;
 
+    uint8_t* bufferToHoldFileHeader;
     FILE* in;
     FILE* out;
 
