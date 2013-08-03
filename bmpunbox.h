@@ -4,12 +4,14 @@
 #include <string>
 
 #include "bmp.h"
+#include "fileinfo.h"
 
 class BMPUnbox
 {
 
 private:
     FILE* in;
+    geninfo_t* fileInfo;
 
 public:
     /**
@@ -17,6 +19,12 @@ public:
      * @param fileName image name.
      */
     BMPUnbox(std::string fileName);
+
+    /**
+     * @brief getFileInfo Gets a pointer to fileinfo structure.
+     * @return a pointer to a geninfo_t.
+     */
+    geninfo_t* getFileInfo();
 
     /**
      * @brief readBytes Reads a number of length unsigned 8 bit values from the input file.
