@@ -4,7 +4,8 @@
 #
 #-------------------------------------------------
 
-QT       -= core gui
+QT       += core
+QT       -= gui
 
 TARGET = bmpbox
 TEMPLATE = lib
@@ -13,7 +14,8 @@ CONFIG += staticlib
 header_files.files += bmpbox.h \
                       bmp.h \
                       bmpunbox.h\
-                      bmptypes.h
+                      bmptypes.h \
+                      fileinfo.h
 
 
 SOURCES += bmpbox.cpp \
@@ -22,7 +24,8 @@ SOURCES += bmpbox.cpp \
 HEADERS += bmpbox.h \
     bmp.h \
     bmpunbox.h \
-    bmptypes.h
+    bmptypes.h \
+    fileinfo.h
 
 unix:!symbian {
     maemo5 {
