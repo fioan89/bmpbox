@@ -5,7 +5,8 @@ A static library for encoding general files to a bitmap image file.
 
 How to install **bmpbox**
 ----------------
-First of, please make sure you have **qmake** and **GNU Toolchain** installed.
+First of, please make sure you have **qmake** and **GNU Toolchain** installed.  
+Also **QT core libraries** is a must!
 
 * Linux
   1. Run in a terminal:
