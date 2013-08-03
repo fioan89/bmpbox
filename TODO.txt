@@ -1,7 +1,8 @@
 [x] optimize writeToFile so that pixel buffer length will not contain the whole file.
 [x] try to fill pixel buffer with more than one value (2, 3, 4)
-[] create an unbox class
+[X] create an unbox class
+[] add support for writing to sockets not jus file streams
 [] flickr limits the picture size. Experiment with multiple size and try to save a
 general file into multiple bmp pictures.
-[] add support for general file info i.e : file name, file size, parent directory, file
+[X] add support for general file info i.e : file name, file size, parent directory, file
 extension, file splitted or not, etc..
